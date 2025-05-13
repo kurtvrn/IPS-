@@ -1,0 +1,671 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indigenous Peoples Map</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        .description {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .map-container {
+            position: relative;
+            height: 500px;
+            background-color: #d4e6f1;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        .map {
+            width: 100%;
+            height: 100%;
+            background-color: #aed6f1;
+        }
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 300px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            max-height: 480px;
+            overflow-y: auto;
+        }
+        .info-content {
+            display: none;
+        }
+        .info-content.active {
+            display: block;
+        }
+        .default-info {
+            text-align: center;
+            padding: 20px 0;
+        }
+        .hotspot {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #e74c3c;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 2;
+        }
+        .hotspot:hover {
+            transform: translate(-50%, -50%) scale(1.3);
+            box-shadow: 0 0 10px rgba(231, 76, 60, 0.7);
+        }
+        .hotspot.active {
+            background-color: #2ecc71;
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.7);
+        }
+        .hotspot::after {
+            content: '';
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 2px solid #e74c3c;
+            border-radius: 50%;
+            top: -7px;
+            left: -7px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% {
+                transform: scale(0.9);
+                opacity: 1;
+            }
+            70% {
+                transform: scale(1.3);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+        }
+        .tooltip {
+            position: absolute;
+            background-color: rgba(44, 62, 80, 0.9);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 3;
+            white-space: nowrap;
+        }
+        .region-selector {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .region-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 0 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .region-btn:hover {
+            background-color: #2980b9;
+        }
+        .region-btn.active {
+            background-color: #2c3e50;
+        }
+        .info-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+
+
+border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+        .info-subtitle {
+            font-size: 16px;
+            font-weight: bold;
+            color: #e74c3c;
+            margin: 10px 0 5px;
+        }
+        .challenge-item {
+            margin-bottom: 10px;
+            padding-left: 15px;
+            position: relative;
+        }
+        .challenge-item:before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #e74c3c;
+        }
+        .solution-item {
+            margin-bottom: 10px;
+            padding-left: 15px;
+            position: relative;
+        }
+        .solution-item:before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: #2ecc71;
+        }
+        .legend {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .legend-item {
+            display: inline-block;
+            margin: 0 15px;
+            font-size: 14px;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Indigenous Peoples of the World</h1>
+        <div class="description">
+            <p>Explore indigenous communities around the world and learn about their unique cultures, challenges, and conservation efforts.</p>
+        </div>
+        
+        <div class="region-selector">
+            <button class="region-btn active" data-region="philippines">Philippines</button>
+            <button class="region-btn" data-region="americas">Americas</button>
+            <button class="region-btn" data-region="africa">Africa</button>
+            <button class="region-btn" data-region="asia">Asia & Pacific</button>
+        </div>
+        
+        <div class="map-container">
+            <div class="map" id="philippines-map">
+                <img src="https://www.freeworldmaps.net/asia/philippines/philippines-physical-map.jpg" alt="Philippines Map Background" style="width:100%; height:100%; object-fit:cover;">
+                <!-- Philippines Hotspots -->
+                <div class="hotspot" style="top: 25%; left: 20%;" data-id="aeta"></div>
+                <div class="hotspot" style="top: 30%; left: 40%;" data-id="ifugao"></div>
+                <div class="hotspot" style="top: 40%; left: 50%;" data-id="mangyan"></div>
+                <div class="hotspot" style="top: 60%; left: 70%;" data-id="badjao"></div>
+                <div class="hotspot" style="top: 70%; left: 80%;" data-id="lumad"></div>
+            </div>
+            
+            <div class="map" id="americas-map" style="display:none;">
+                <img src="/api/placeholder/1160/500" alt="Americas Map Background" style="width:100%; height:100%; object-fit:cover;">
+                <!-- Americas Hotspots -->
+                <div class="hotspot" style="top: 30%; left: 25%;" data-id="navajo"></div>
+                <div class="hotspot" style="top: 40%; left: 35%;" data-id="maya"></div>
+                <div class="hotspot" style="top: 60%; left: 40%;" data-id="quechua"></div>
+                <div class="hotspot" style="top: 70%; left: 45%;" data-id="mapuche"></div>
+                <div class="hotspot" style="top: 15%; left: 15%;" data-id="inuit"></div>
+            </div>
+            
+            <div class="map" id="africa-map" style="display:none;">
+                <img src="/api/placeholder/1160/500" alt="Africa Map Background" style="width:100%; height:100%; object-fit:cover;">
+                <!-- Africa Hotspots -->
+                <div class="hotspot" style="top: 30%; left: 48%;" data-id="maasai"></div>
+                <div class="hotspot" style="top: 15%; left: 45%;" data-id="tuareg"></div>
+                <div class="hotspot" style="top: 40%; left: 20%;" data-id="pygmy"></div>
+                <div class="hotspot" style="top: 70%; left: 55%;" data-id="san"></div>
+                <div class="hotspot" style="top: 25%; left: 65%;" data-id="afar"></div>
+
+
+</div>
+            
+            <div class="map" id="asia-map" style="display:none;">
+                <img src="/api/placeholder/1160/500" alt="Asia & Pacific Map Background" style="width:100%; height:100%; object-fit:cover;">
+                <!-- Asia & Pacific Hotspots -->
+                <div class="hotspot" style="top: 20%; left: 40%;" data-id="tibetan"></div>
+                <div class="hotspot" style="top: 45%; left: 80%;" data-id="aboriginal"></div>
+                <div class="hotspot" style="top: 35%; left: 60%;" data-id="ainu"></div>
+                <div class="hotspot" style="top: 50%; left: 45%;" data-id="karen"></div>
+                <div class="hotspot" style="top: 30%; left: 25%;" data-id="adivasi"></div>
+            </div>
+            
+            <div class="info-panel">
+                <div class="default-info">
+                    <h3>Indigenous Peoples Map</h3>
+                    <p>Click on any highlighted point to learn about the indigenous community in that region.</p>
+                </div>
+                
+                <!-- Philippines Indigenous Groups -->
+                <div class="info-content" id="aeta-info">
+                    <div class="info-title">Aeta People</div>
+                    <p>The Aeta are indigenous people who live in scattered, isolated mountainous parts of Luzon, Philippines. They are thought to be among the earliest inhabitants of the Philippines.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Land displacement due to urbanization and industrial development</div>
+                    <div class="challenge-item">Loss of ancestral forest territories due to deforestation</div>
+                    <div class="challenge-item">Limited access to education and healthcare services</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Indigenous Protected Area initiatives</div>
+                    <div class="solution-item">Traditional knowledge documentation programs</div>
+                    <div class="solution-item">Cultural education campaigns in schools</div>
+                </div>
+                
+                <div class="info-content" id="ifugao-info">
+                    <div class="info-title">Ifugao People</div>
+                    <p>The Ifugao are known for their extensive rice terraces, which were carved into the mountainsides of Ifugao Province over 2,000 years ago and are sometimes called the "Eighth Wonder of the World".</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Climate change affecting traditional farming practices</div>
+                    <div class="challenge-item">Outmigration of youth to urban areas</div>
+                    <div class="challenge-item">Tourism impact on traditional practices</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Rice terrace preservation programs</div>
+                    <div class="solution-item">UNESCO Heritage Site protection</div>
+                    <div class="solution-item">Sustainable tourism initiatives</div>
+                </div>
+                
+                <div class="info-content" id="mangyan-info">
+                    <div class="info-title">Mangyan People</div>
+                    <p>The Mangyan are indigenous peoples living in Mindoro, Philippines, comprising eight distinct tribes with their own language and customs.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Encroachment on ancestral lands by mining companies</div>
+                    <div class="challenge-item">Loss of traditional script and language</div>
+                    <div class="challenge-item">Limited educational opportunities</div>
+
+
+<div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Mangyan script preservation projects</div>
+                    <div class="solution-item">Indigenous schools with culturally appropriate curriculum</div>
+                    <div class="solution-item">Legal support for ancestral domain claims</div>
+                </div>
+                
+                <div class="info-content" id="badjao-info">
+                    <div class="info-title">Badjao Sea People</div>
+                    <p>The Badjao are sea nomads known as "Sea Gypsies" who traditionally lived most of their lives on boats in the waters of the Sulu Sea and coastal areas of Mindanao.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Marine habitat degradation affecting traditional livelihood</div>
+                    <div class="challenge-item">Displacement due to maritime conflicts</div>
+                    <div class="challenge-item">Discrimination and limited citizenship recognition</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Marine protected areas with indigenous co-management</div>
+                    <div class="solution-item">Traditional fishing practice documentation</div>
+                    <div class="solution-item">Housing programs that respect cultural preferences</div>
+                </div>
+                
+                <div class="info-content" id="lumad-info">
+                    <div class="info-title">Lumad Peoples</div>
+                    <p>Lumad is a term for a group of indigenous peoples of Mindanao, comprising multiple ethnolinguistic groups including the Manobo, B'laan, and Subanon among others.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Militarization of ancestral territories</div>
+                    <div class="challenge-item">Large-scale plantations and extractive industries</div>
+                    <div class="challenge-item">Human rights violations against indigenous leaders</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Alternative learning systems with indigenous curriculum</div>
+                    <div class="solution-item">Community-led forest management programs</div>
+                    <div class="solution-item">International advocacy campaigns</div>
+                </div>
+                
+                <!-- Americas Indigenous Groups -->
+                <div class="info-content" id="navajo-info">
+                    <div class="info-title">Navajo (Diné) Nation</div>
+                    <p>The Navajo Nation is the largest federally recognized tribe in the United States, with territory spanning parts of Arizona, New Mexico, and Utah.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Water access and rights issues</div>
+                    <div class="challenge-item">Legacy of uranium mining contamination</div>
+                    <div class="challenge-item">Limited economic opportunities on reservation lands</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Solar energy development projects</div>
+                    <div class="solution-item">Language immersion schools</div>
+                    <div class="solution-item">Traditional farming revitalization</div>
+                </div>
+                
+                <div class="info-content" id="maya-info">
+                    <div class="info-title">Maya Peoples</div>
+
+<p>The Maya are a group of indigenous peoples of Mesoamerica, descendants of the ancient Mayan civilization that thrived in present-day Mexico, Guatemala, Belize, Honduras, and El Salvador.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Ongoing discrimination and marginalization</div>
+                    <div class="challenge-item">Land rights conflicts with agribusiness</div>
+                    <div class="challenge-item">Climate change affecting traditional farming cycles</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Traditional agroforestry systems preservation</div>
+                    <div class="solution-item">Bilingual education programs</div>
+                    <div class="solution-item">Cultural heritage tourism managed by communities</div>
+                </div>
+                
+                <div class="info-content" id="quechua-info">
+                    <div class="info-title">Quechua People</div>
+                    <p>The Quechua are indigenous peoples in South America who speak Quechua languages, descendants of the Inca Empire and other pre-Inca cultures across the Andean region.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Mining activities threatening water sources</div>
+                    <div class="challenge-item">Loss of traditional agricultural knowledge</div>
+                    <div class="challenge-item">Limited political representation</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Potato biodiversity conservation</div>
+                    <div class="solution-item">Traditional medicine documentation and protection</div>
+                    <div class="solution-item">Constitutional recognition of indigenous rights</div>
+                </div>
+                
+                <div class="info-content" id="mapuche-info">
+                    <div class="info-title">Mapuche People</div>
+                    <p>The Mapuche are indigenous inhabitants of south-central Chile and southwestern Argentina, known for successfully resisting both Inca and initial Spanish colonization attempts.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Forestry industry expansion on traditional lands</div>
+                    <div class="challenge-item">Criminalization of land rights activism</div>
+                    <div class="challenge-item">Water rights conflicts</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Indigenous-managed protected areas</div>
+                    <div class="solution-item">Cultural centers for language preservation</div>
+                    <div class="solution-item">Legal reforms recognizing traditional governance</div>
+                </div>
+                
+                <div class="info-content" id="inuit-info">
+                    <div class="info-title">Inuit People</div>
+                    <p>The Inuit are a group of culturally similar indigenous peoples inhabiting the Arctic regions of Greenland, Canada, and Alaska, traditionally living as hunter-gatherers.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Rapid climate change affecting traditional hunting</div>
+                    <div class="challenge-item">Food insecurity and high living costs</div>
+                    <div class="challenge-item">Environmental contaminants in traditional food sources</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+
+<div class="solution-item">Self-government arrangements</div>
+                    <div class="solution-item">Traditional knowledge climate change monitoring</div>
+                    <div class="solution-item">Community-based marine mammal management</div>
+                </div>
+                
+                <!-- Africa Indigenous Groups -->
+                <div class="info-content" id="maasai-info">
+                    <div class="info-title">Maasai People</div>
+                    <p>The Maasai are a Nilotic ethnic group inhabiting northern, central and southern Kenya and northern Tanzania, known for their distinctive customs and dress.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Land privatization limiting traditional pastoral routes</div>
+                    <div class="challenge-item">Conservation policies restricting access to traditional lands</div>
+                    <div class="challenge-item">Climate change affecting cattle grazing patterns</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Community-based wildlife conservancies</div>
+                    <div class="solution-item">Cultural tourism managed by Maasai communities</div>
+                    <div class="solution-item">Sustainable livestock programs</div>
+                </div>
+                
+                <div class="info-content" id="tuareg-info">
+                    <div class="info-title">Tuareg People</div>
+                    <p>The Tuareg are a Berber ethnic group inhabiting the Sahara across several countries including Niger, Mali, Algeria, Libya, and Burkina Faso, traditionally nomadic pastoralists.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Desertification affecting traditional livelihoods</div>
+                    <div class="challenge-item">Political marginalization across multiple countries</div>
+                    <div class="challenge-item">Impact of resource extraction on traditional territories</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Desert restoration techniques using traditional knowledge</div>
+                    <div class="solution-item">Silver craft artisan preservation programs</div>
+                    <div class="solution-item">Cross-border cultural heritage initiatives</div>
+                </div>
+                
+                <div class="info-content" id="pygmy-info">
+                    <div class="info-title">Pygmy Peoples</div>
+                    <p>Pygmy peoples are various ethnic groups in Central Africa whose average height is unusually short, traditionally hunter-gatherers living in forests across several countries.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Deforestation threatening forest-based livelihoods</div>
+                    <div class="challenge-item">Severe discrimination and marginalization</div>
+                    <div class="challenge-item">Limited citizenship recognition in some countries</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Forest co-management arrangements</div>
+                    <div class="solution-item">Traditional medicine knowledge protection</div>
+                    <div class="solution-item">Human rights advocacy campaigns</div>
+                </div>
+                
+                <div class="info-content" id="san-info">
+                    <div class="info-title">San People</div>
+
+<p>The San are the indigenous hunter-gatherer peoples of Southern Africa, among the oldest cultures on Earth with genetic evidence suggesting they are one of humanity's most ancient populations.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Restricted access to traditional hunting territories</div>
+                    <div class="challenge-item">Biopiracy of traditional plant knowledge</div>
+                    <div class="challenge-item">Water access in increasingly arid regions</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">San Code of Research Ethics development</div>
+                    <div class="solution-item">Traditional ecological knowledge documentation</div>
+                    <div class="solution-item">Rock art heritage conservation</div>
+                </div>
+                
+                <div class="info-content" id="afar-info">
+                    <div class="info-title">Afar People</div>
+                    <p>The Afar are an ethnic group inhabiting the Horn of Africa, primarily in Ethiopia, Eritrea, and Djibouti, traditionally pastoral nomads adapted to one of the harshest environments on Earth.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Large-scale agricultural development displacing pastoralists</div>
+                    <div class="challenge-item">Increasingly severe drought cycles</div>
+                    <div class="challenge-item">Cross-border movement restrictions</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Traditional pastoralist route protection</div>
+                    <div class="solution-item">Drought-resistant livestock breeding programs</div>
+                    <div class="solution-item">Salt mining rights protection</div>
+                </div>
+                
+                <!-- Asia & Pacific Indigenous Groups -->
+                <div class="info-content" id="tibetan-info">
+                    <div class="info-title">Tibetan People</div>
+                    <p>Tibetans are an ethnic group native to Tibet, a region covering much of the Tibetan Plateau in Asia, with a distinct culture heavily influenced by Buddhism.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Cultural and religious practice restrictions</div>
+                    <div class="challenge-item">Climate change on the "Third Pole" affecting water resources</div>
+                    <div class="challenge-item">Rapid development altering traditional pastoral systems</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Traditional medicine knowledge preservation</div>
+                    <div class="solution-item">Sustainable yak herding practices</div>
+                    <div class="solution-item">Language and literature documentation programs</div>
+                </div>
+                
+                <div class="info-content" id="aboriginal-info">
+                    <div class="info-title">Aboriginal Australians</div>
+                    <p>Aboriginal Australians are the various indigenous peoples of the Australian mainland and many of its islands, descendants of groups that existed in Australia for over 65,000 years.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Health and life expectancy disparities</div>
+                    <div class="challenge-item">Mining activities on sacred sites</div>
+                    <div class="challenge-item">Intergenerational trauma from historical policies</div>
+
+
+<div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Indigenous Protected Areas program</div>
+                    <div class="solution-item">Aboriginal ranger programs for land management</div>
+                    <div class="solution-item">Cultural burning practices for ecosystem management</div>
+                </div>
+                
+                <div class="info-content" id="ainu-info">
+                    <div class="info-title">Ainu People</div>
+                    <p>The Ainu are an indigenous people of Japan (Hokkaido) and Russia (Sakhalin, Kuril Islands), officially recognized as an indigenous people of Japan in 2008.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Severe population decline and assimilation</div>
+                    <div class="challenge-item">Loss of traditional hunting and fishing rights</div>
+                    <div class="challenge-item">Limited recognition of historical injustices</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Language revitalization programs</div>
+                    <div class="solution-item">Traditional craft preservation initiatives</div>
+                    <div class="solution-item">Cultural centers and museums managed by Ainu communities</div>
+                </div>
+                
+                <div class="info-content" id="karen-info">
+                    <div class="info-title">Karen People</div>
+                    <p>The Karen are ethnolinguistic groups primarily in Myanmar (Burma) and Thailand, comprising multiple distinct Karen groups with their own languages and customs.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Displacement due to armed conflict</div>
+                    <div class="challenge-item">Refugee status and statelessness</div>
+                    <div class="challenge-item">Resource extraction in traditional territories</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Traditional rotational farming recognition</div>
+                    <div class="solution-item">Community forest initiatives</div>
+                    <div class="solution-item">Cultural preservation in refugee communities</div>
+                </div>
+                
+                <div class="info-content" id="adivasi-info">
+                    <div class="info-title">Adivasi Peoples</div>
+                    <p>Adivasi is the collective term for tribes of the Indian subcontinent who are considered indigenous to regions across India, comprising over 700 tribes with distinct languages and cultural traditions.</p>
+                    
+                    <div class="info-subtitle">Challenges:</div>
+                    <div class="challenge-item">Displacement by large dams and industrial projects</div>
+                    <div class="challenge-item">Deforestation affecting forest-dependent communities</div>
+                    <div class="challenge-item">Limited implementation of protective legislation</div>
+                    
+                    <div class="info-subtitle">Conservation Efforts:</div>
+                    <div class="solution-item">Forest Rights Act implementation advocacy</div>
+                    <div class="solution-item">Tribal knowledge digital documentation projects</div>
+                    <div class="solution-item">Community-led seed banking of indigenous varieties</div>
+                </div>
+            </div>
+            
+            <div class="tooltip" id="tooltip"></div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #e74c3c;"></span>
+                Indigenous Community Location
+            </div>
+
+<div class="legend-item">
+                <span class="legend-color" style="background-color: #2ecc71;"></span>
+                Selected Community
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Region switching
+            const regionButtons = document.querySelectorAll('.region-btn');
+            const maps = document.querySelectorAll('.map');
+            
+            regionButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const region = this.getAttribute('data-region');
+                    
+                    // Update buttons
+                    regionButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update maps
+                    maps.forEach(map => map.style.display = 'none');
+                    document.getElementById(region + '-map').style.display = 'block';
+                    
+                    // Reset info panel
+                    resetInfoPanel();
+                });
+            });
+            
+            // Hotspot interactions
+            const hotspots = document.querySelectorAll('.hotspot');
+            const infoContents = document.querySelectorAll('.info-content');
+            const defaultInfo = document.querySelector('.default-info');
+            const tooltip = document.getElementById('tooltip');
+            
+            // Show tooltip on hover
+            hotspots.forEach(hotspot => {
+                hotspot.addEventListener('mouseover', function(e) {
+                    const groupId = this.getAttribute('data-id');
+                    const groupName = document.querySelector('#' + groupId + '-info .info-title').textContent;
+                    
+                    tooltip.textContent = groupName;
+                    tooltip.style.opacity = '1';
+                    updateTooltipPosition(e);
+                });
+                
+                hotspot.addEventListener('mousemove', updateTooltipPosition);
+                
+                hotspot.addEventListener('mouseout', function() {
+                    tooltip.style.opacity = '0';
+                });
+                
+                hotspot.addEventListener('click', function() {
+                    const groupId = this.getAttribute('data-id');
+                    
+                    // Reset all hotspots and info contents
+                    hotspots.forEach(h => h.classList.remove('active'));
+                    infoContents.forEach(content => content.classList.remove('active'));
+                    defaultInfo.style.display = 'none';
+                    
+                    // Activate selected hotspot and info
+                    this.classList.add('active');
+                    document.getElementById(groupId + '-info').classList.add('active');
+                });
+            });
+            
+            function updateTooltipPosition(e) {
+                const x = e.clientX;
+                const y = e.clientY;
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                
+                tooltip.style.left = (x + 15) + 'px';
+                tooltip.style.top = (y + scrollTop - 15) + 'px';
+            }
+            
+            function resetInfoPanel() {
+                hotspots.forEach(h => h.classList.remove('active'));
+                infoContents.forEach(content => content.classList.remove('active'));
+                defaultInfo.style.display = 'block';
+            }
+            
+            // Initialize with Philippines map
+            document.querySelector('[data-region="philippines"]').click();
+        });
+    </script>
+</body>
+</html>
